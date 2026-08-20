@@ -89,6 +89,8 @@ function getProxyArg() {
  * Helper untuk mendapatkan path biner yt-dlp secara otomatis
  */
 function getYtdlpBinaryPath() {
+    if (fs.existsSync(path.join(__dirname, "yt-dlp.exe"))) return path.join(__dirname, "yt-dlp.exe");
+    if (fs.existsSync(path.join(__dirname, "yt-dlp"))) return path.join(__dirname, "yt-dlp");
     if (fs.existsSync("/usr/local/bin/yt-dlp")) return "/usr/local/bin/yt-dlp";
     if (fs.existsSync("/usr/bin/yt-dlp")) return "/usr/bin/yt-dlp";
     try {
@@ -156,56 +158,69 @@ function ensureProxyServerRunning(port) {
 }
 
 /**
- * Helper untuk mengekstrak Raw Deciphered Stream URL (.googlevideo.com)
+ * In-memory cache for direct audio URLs
+ */
+const directUrlCache = new Map();
+
+/**
+ * Helper untuk mengekstrak Raw Deciphered Stream URL (.googlevideo.com) secara ASYNC tanpa blocking event loop
  */
 async function getRawDecipheredUrl(videoId) {
     if (!videoId) return null;
+    
+    // Check cache
+    const cached = directUrlCache.get(videoId);
+    if (cached && Date.now() - cached.time < 3600000) { // 1 hour TTL
+        return cached.url;
+    }
+
     let rawUrl = null;
 
-    const binPath = getYtdlpBinaryPath();
-    const cookiePath = getCookieFilePath();
-    const cookieArg = cookiePath ? `--cookies "${cookiePath}"` : "";
-    const proxyUrl = getProxyArg();
-    const proxyArg = proxyUrl ? `--proxy "${proxyUrl}"` : "";
-
-    const potProvider = process.env.POT_PROVIDER_URL || "http://bgutil-ytdlp-pot-provider.railway.internal:4416";
-    const extractorArgs = potProvider
-        ? `youtube:player_client=tv,android;pot_provider_url=${potProvider}`
-        : "youtube:player_client=tv,android";
-
-    const cmds = [
-        `"${binPath}" --no-update --cache-dir /tmp/cache --js-runtimes "deno:/usr/local/bin/deno,node:/usr/local/bin/node,node" --remote-components ejs:github --extractor-args "${extractorArgs}" ${cookieArg} ${proxyArg} -g -f "bestaudio/best" "https://www.youtube.com/watch?v=${videoId}"`,
-        `yt-dlp --no-update --cache-dir /tmp/cache --js-runtimes "deno:/usr/local/bin/deno,node:/usr/local/bin/node,node" --remote-components ejs:github --extractor-args "${extractorArgs}" ${cookieArg} ${proxyArg} -g -f "bestaudio/best" "https://www.youtube.com/watch?v=${videoId}"`
-    ];
-
-    for (const cmd of cmds) {
-        try {
-            const output = execSync(cmd, { stdio: ["ignore", "pipe", "ignore"] }).toString().trim();
-            const lines = output.split(/\r?\n/).filter(l => l.startsWith("http"));
-            if (lines.length > 0) {
-                rawUrl = lines[lines.length - 1];
-                break;
+    // Method 1: Innertube (Super Fast ~300ms, non-blocking)
+    try {
+        const Innertube = await getInnertube();
+        const yt = await Innertube.create({ eval: true });
+        const songInfo = await yt.music.getInfo(videoId);
+        const format = songInfo.chooseFormat({ type: "audio", quality: "best" });
+        if (format) {
+            if (format.url) {
+                rawUrl = format.url;
+            } else if (typeof format.decipher === "function" && yt.session && yt.session.player) {
+                rawUrl = await format.decipher(yt.session.player);
+            } else {
+                const cipherParams = new URLSearchParams(format.signature_cipher || format.cipher);
+                rawUrl = cipherParams.get("url") || null;
             }
+        }
+    } catch (e) { }
+
+    // Method 2: Async yt-dlp -g with Promise (non-blocking)
+    if (!rawUrl) {
+        const binPath = getYtdlpBinaryPath();
+        const cookiePath = getCookieFilePath();
+        const cookieArg = cookiePath ? `--cookies "${cookiePath}"` : "";
+        const proxyUrl = getProxyArg();
+        const proxyArg = proxyUrl ? `--proxy "${proxyUrl}"` : "";
+        const potProvider = process.env.POT_PROVIDER_URL || "http://bgutil-ytdlp-pot-provider.railway.internal:4416";
+        const extractorArgs = potProvider
+            ? `youtube:player_client=tv,android;pot_provider_url=${potProvider}`
+            : "youtube:player_client=tv,android";
+
+        const cmd = `"${binPath}" --no-update --cache-dir /tmp/cache --extractor-args "${extractorArgs}" ${cookieArg} ${proxyArg} -g -f "bestaudio/best" "https://www.youtube.com/watch?v=${videoId}"`;
+
+        try {
+            rawUrl = await new Promise((resolve) => {
+                exec(cmd, { timeout: 10000 }, (err, stdout) => {
+                    if (err || !stdout) return resolve(null);
+                    const lines = stdout.toString().trim().split(/\r?\n/).filter(l => l.startsWith("http"));
+                    resolve(lines.length > 0 ? lines[lines.length - 1] : null);
+                });
+            });
         } catch (e) { }
     }
 
-    if (!rawUrl) {
-        try {
-            const Innertube = await getInnertube();
-            const yt = await Innertube.create({ eval: true });
-            const songInfo = await yt.music.getInfo(videoId);
-            const format = songInfo.chooseFormat({ type: "audio", quality: "best" });
-            if (format) {
-                if (format.url) {
-                    rawUrl = format.url;
-                } else if (typeof format.decipher === "function" && yt.session && yt.session.player) {
-                    rawUrl = await format.decipher(yt.session.player);
-                } else {
-                    const cipherParams = new URLSearchParams(format.signature_cipher || format.cipher);
-                    rawUrl = cipherParams.get("url") || null;
-                }
-            }
-        } catch (e) { }
+    if (rawUrl) {
+        directUrlCache.set(videoId, { url: rawUrl, time: Date.now() });
     }
 
     return rawUrl;
@@ -293,8 +308,9 @@ async function getSyncedLyrics(rawTitle, rawArtist) {
                             const secs = parseFloat(match[2]);
                             const totalSeconds = Math.round((mins * 60 + secs) * 100) / 100;
                             return {
-                                time: `${match[1]}:${match[2]}`,
+                                time: totalSeconds,
                                 seconds: totalSeconds,
+                                timeStr: `${match[1]}:${match[2]}`,
                                 text: match[3]
                             };
                         }
@@ -361,13 +377,23 @@ function formatItem(item, baseUrl = ALIAS_BASE_URL) {
         id: id,
         title: title
     };
+    
+    if (type === "song") obj.videoId = id;
+    if (type === "playlist") obj.playlistId = id;
+    if (type === "album") obj.albumId = id;
+    if (type === "artist") obj.artistId = id;
 
     if (artistName) obj.artist = artistName;
     if (item.album) obj.album = typeof item.album === "object" ? item.album.name : item.album;
     if (durationStr) obj.duration = durationStr;
 
     const cover = getBestCover(item.thumbnails);
-    if (cover) obj.coverArt = cover;
+    if (cover) {
+        obj.coverArt = cover;
+        obj.cover = cover;
+        obj.thumbnail = cover;
+        obj.thumbnails = [{ url: cover }];
+    }
 
     if (item.videoId) {
         obj.webUrl = `https://music.youtube.com/watch?v=${item.videoId}`;
@@ -400,6 +426,8 @@ function detectIdType(id) {
 async function fetchSongDetails(videoId, ytmusic, baseUrl = ALIAS_BASE_URL) {
     const cleanId = videoId.replace(/^.*v=/, "");
     let yt = null;
+    // DISABLE YOUTUBEI.JS COMPLETELY to fix event loop blocking and 10 second delay
+    /*
     try {
         const Innertube = await getInnertube();
         yt = await Innertube.create({ eval: true });
@@ -410,6 +438,7 @@ async function fetchSongDetails(videoId, ytmusic, baseUrl = ALIAS_BASE_URL) {
             yt = await Innertube.create({ eval: true });
         } catch (err) { }
     }
+    */
 
     let title = null;
     let artist = null;
@@ -560,7 +589,30 @@ async function fetchSongDetails(videoId, ytmusic, baseUrl = ALIAS_BASE_URL) {
 
 async function fetchArtistDetails(artistId, ytmusic, baseUrl = ALIAS_BASE_URL) {
     const cleanId = artistId.replace(/^.*channel\//, "");
-    const artist = await ytmusic.getArtist(cleanId);
+    let artist = { name: "", topSongs: [], albums: [], thumbnails: [] };
+    try {
+        const res = await ytmusic.getArtist(cleanId);
+        if (res) artist = res;
+    } catch (e) {}
+
+    // Fallback if ytmusic-api getArtist is broken
+    if (!artist.name || !artist.topSongs || artist.topSongs.length === 0) {
+        try {
+            const html = await (await fetch(`https://music.youtube.com/channel/${cleanId}`)).text();
+            const nameMatch = html.match(/<title>(.*?)\s-\sYouTube Music<\/title>/);
+            artist.name = nameMatch ? nameMatch[1] : "Artist";
+            
+            const thumbMatch = html.match(/<meta property="og:image" content="(.*?)"/);
+            if (thumbMatch) artist.thumbnails = [{ url: thumbMatch[1] }];
+            
+            const searchRes = await ytmusic.search(artist.name);
+            artist.topSongs = searchRes.filter(x => x.type === "SONG" || x.type === "VIDEO").slice(0, 10);
+            artist.albums = searchRes.filter(x => x.type === "ALBUM").slice(0, 5);
+        } catch (e) {
+            console.error("Artist Fallback Error:", e);
+        }
+    }
+
     return {
         status: "success",
         command: "artist",
@@ -593,75 +645,193 @@ async function fetchArtistDetails(artistId, ytmusic, baseUrl = ALIAS_BASE_URL) {
 
 async function fetchAlbumDetails(albumId, ytmusic, baseUrl = ALIAS_BASE_URL) {
     const cleanId = albumId.replace(/^.*browse\//, "");
-    const album = await ytmusic.getAlbum(cleanId);
-    const rawSongs = album.songs || album.tracks || [];
-    const tracks = rawSongs.map((t, idx) => ({
-        trackNumber: idx + 1,
-        id: t.videoId || null,
-        title: t.title || t.name,
-        artist: t.artist ? (typeof t.artist === "object" ? t.artist.name : t.artist) : (album.artist ? (album.artist.name || album.artist) : null),
-        duration: t.duration ? (typeof t.duration === 'number' ? `${Math.floor(t.duration / 60)}:${(t.duration % 60).toString().padStart(2, '0')}` : t.duration) : null,
-        webUrl: t.videoId ? `https://music.youtube.com/watch?v=${t.videoId}` : null,
-        streamUrl: t.videoId ? `${baseUrl}/stream/${t.videoId}` : null
-    }));
+    
+    // RDCLAK / VLRD / PL are playlists in YouTube Music
+    if (cleanId.startsWith("RD") || cleanId.startsWith("VLRD") || cleanId.startsWith("PL") || cleanId.startsWith("VLPL")) {
+        return await fetchPlaylistDetails(cleanId, ytmusic, baseUrl);
+    }
+
+    let album = null;
+    try {
+        album = await ytmusic.getAlbum(cleanId);
+    } catch (e) { }
+
+    if (!album || (!album.songs && !album.tracks) || (album.songs && album.songs.length === 0)) {
+        try {
+            album = await ytmusic.getPlaylist(cleanId);
+        } catch (e) { }
+    }
+
+    let rawSongs = (album && (album.songs || album.tracks)) ? (album.songs || album.tracks) : [];
+    if (rawSongs.length === 0) {
+        try {
+            const vids = await ytmusic.getPlaylistVideos(cleanId);
+            if (vids && vids.length > 0) rawSongs = vids;
+        } catch (e) { }
+    }
+
+    let albumTitle = album ? (album.name || album.title || "Album") : "Album";
+    let albumAuthor = album && album.artist ? (typeof album.artist === 'object' ? album.artist.name : album.artist) : null;
+    let albumCover = album ? getBestCover(album.thumbnails) : null;
+
+    const tracks = rawSongs.map((t, idx) => {
+        const vid = t.videoId || t.id || null;
+        const trackCover = vid ? `https://i.ytimg.com/vi/${vid}/hqdefault.jpg` : (getBestCover(t.thumbnails) || albumCover);
+
+        let trackTitle = t.title || t.name || "Song";
+        let trackArtist = t.artist ? (typeof t.artist === "object" ? (t.artist.name || t.artist.title) : t.artist) : (albumAuthor || null);
+
+        if (trackTitle && trackTitle.includes(" - ")) {
+            const cleaned = cleanTitleAndArtist(trackTitle, trackArtist);
+            trackTitle = cleaned.title;
+            trackArtist = cleaned.artist;
+        }
+
+        return {
+            trackNumber: idx + 1,
+            id: vid,
+            videoId: vid,
+            title: trackTitle,
+            artist: trackArtist,
+            duration: t.duration ? (typeof t.duration === 'number' ? `${Math.floor(t.duration / 60)}:${(t.duration % 60).toString().padStart(2, '0')}` : t.duration) : null,
+            coverArt: trackCover,
+            cover: trackCover,
+            thumbnail: trackCover,
+            thumbnails: [{ url: trackCover }],
+            webUrl: vid ? `https://music.youtube.com/watch?v=${vid}` : null,
+            streamUrl: vid ? `${baseUrl}/stream/${vid}` : null
+        };
+    });
+
+    if (!albumCover && tracks.length > 0 && tracks[0].coverArt) {
+        albumCover = tracks[0].coverArt;
+    }
 
     return {
-        status: "success",
+        status: true,
         command: "album",
         type: "album",
-        data: {
+        result: {
             id: cleanId,
-            title: album.name || album.title || null,
-            artist: album.artist ? (album.artist.name || album.artist) : null,
-            year: album.year || null,
+            title: albumTitle,
+            artist: albumAuthor,
+            year: album ? album.year : null,
             totalTracks: tracks.length,
-            coverArt: getBestCover(album.thumbnails),
+            coverArt: albumCover,
+            cover: albumCover,
+            thumbnail: albumCover,
+            thumbnails: (album && album.thumbnails && album.thumbnails.length > 0) ? album.thumbnails : (albumCover ? [{ url: albumCover }] : []),
             webUrl: `https://music.youtube.com/browse/${cleanId}`,
-            tracks: tracks
+            songs: tracks
         }
     };
 }
 
 async function fetchPlaylistDetails(playlistId, ytmusic, baseUrl = ALIAS_BASE_URL) {
-    const cleanId = playlistId.replace(/^.*list=/, "");
-    let tracks = [];
+    let cleanId = playlistId.replace(/^.*list=/, "");
+    // YouTube Music requires VL prefix for RDCLAK radio playlists
+    const lookupId = cleanId.startsWith("RD") ? ("VL" + cleanId) : cleanId;
+
+    let rawVideos = [];
     let title = null;
     let author = null;
     let cover = null;
+    let playlist = null;
 
     try {
-        const playlist = await ytmusic.getPlaylist(cleanId);
-        title = playlist.name || playlist.title || null;
-        author = playlist.artist ? (playlist.artist.name || playlist.artist) : (playlist.author ? (playlist.author.name || playlist.author) : null);
-        cover = getBestCover(playlist.thumbnails);
+        playlist = await ytmusic.getPlaylist(lookupId);
+        if (playlist) {
+            title = playlist.name || playlist.title || null;
+            author = playlist.artist ? (playlist.artist.name || playlist.artist) : (playlist.author ? (playlist.author.name || playlist.author) : null);
+            cover = getBestCover(playlist.thumbnails);
+        }
     } catch (e) { }
 
     try {
-        const videos = await ytmusic.getPlaylistVideos(cleanId);
-        tracks = videos.map((t, idx) => ({
+        const videos = await ytmusic.getPlaylistVideos(lookupId);
+        if (videos && videos.length > 0) {
+            rawVideos = videos;
+        }
+    } catch (e) { }
+
+    if (rawVideos.length === 0 && lookupId !== cleanId) {
+        try {
+            const videos = await ytmusic.getPlaylistVideos(cleanId);
+            if (videos && videos.length > 0) rawVideos = videos;
+        } catch(e){}
+    }
+
+    if (rawVideos.length === 0) {
+        try {
+            const alb = await ytmusic.getAlbum(cleanId);
+            if (alb && (alb.songs || alb.tracks)) {
+                rawVideos = alb.songs || alb.tracks;
+                if (!title) title = alb.name || alb.title;
+                if (!author) author = alb.artist;
+                if (!cover) cover = getBestCover(alb.thumbnails);
+            }
+        } catch (e) { }
+    }
+
+    // Fallback if YouTube returns 0 songs (e.g. RDCLAK radios)
+    if (rawVideos.length === 0) {
+        try {
+            const q = (title && title !== "Playlist") ? title : cleanId.replace(/[^a-zA-Z0-9 ]/g, ' ').trim();
+            if (q) {
+                const sRes = await ytmusic.search(q);
+                const songMatches = sRes.filter(x => x.type === "SONG" || x.type === "VIDEO" || x.videoId);
+                if (songMatches.length > 0) rawVideos = songMatches.slice(0, 25);
+            }
+        } catch (e) { }
+    }
+
+    const tracks = rawVideos.map((t, idx) => {
+        const vid = t.videoId || t.id || null;
+        const trackCover = vid ? `https://i.ytimg.com/vi/${vid}/hqdefault.jpg` : (getBestCover(t.thumbnails) || cover);
+        let trackTitle = t.name || t.title || "Song";
+        let trackArtist = t.artist ? (typeof t.artist === "object" ? (t.artist.name || t.artist.title) : t.artist) : (t.author ? (typeof t.author === 'object' ? t.author.name : t.author) : author);
+
+        if (trackTitle && trackTitle.includes(" - ")) {
+            const cleaned = cleanTitleAndArtist(trackTitle, trackArtist);
+            trackTitle = cleaned.title;
+            trackArtist = cleaned.artist;
+        }
+
+        return {
             trackNumber: idx + 1,
-            id: t.videoId || t.id || null,
-            title: t.name || t.title,
-            artist: t.artist ? (typeof t.artist === "object" ? t.artist.name : t.artist) : null,
+            id: vid,
+            videoId: vid,
+            title: trackTitle,
+            artist: trackArtist,
             duration: t.duration ? (typeof t.duration === 'number' ? `${Math.floor(t.duration / 60)}:${(t.duration % 60).toString().padStart(2, '0')}` : t.duration) : null,
-            coverArt: getBestCover(t.thumbnails),
-            webUrl: t.videoId ? `https://music.youtube.com/watch?v=${t.videoId}` : null,
-            streamUrl: t.videoId ? `${baseUrl}/stream/${t.videoId}` : null
-        }));
-    } catch (e) { }
+            coverArt: trackCover,
+            cover: trackCover,
+            thumbnail: trackCover,
+            thumbnails: [{ url: trackCover }],
+            webUrl: vid ? `https://music.youtube.com/watch?v=${vid}` : null,
+            streamUrl: vid ? `${baseUrl}/stream/${vid}` : null
+        };
+    });
+
+    if (!cover && tracks.length > 0 && tracks[0].coverArt) {
+        cover = tracks[0].coverArt;
+    }
 
     return {
-        status: "success",
+        status: true,
         command: "playlist",
         type: "playlist",
-        data: {
+        result: {
             id: cleanId,
-            title: title,
+            title: title || "Playlist",
             author: author,
             totalTracks: tracks.length,
             coverArt: cover,
+            cover: cover,
+            thumbnail: cover,
+            thumbnails: (playlist && playlist.thumbnails && playlist.thumbnails.length > 0) ? playlist.thumbnails : (cover ? [{ url: cover }] : []),
             webUrl: `https://music.youtube.com/playlist?list=${cleanId}`,
-            tracks: tracks
+            songs: tracks
         }
     };
 }
@@ -832,24 +1002,40 @@ function startRestApiServer(port) {
 
         const parsedUrl = new URL(req.url, currentBaseUrl);
         const pathname = parsedUrl.pathname;
-        const query = Object.fromEntries(parsedUrl.searchParams);
+        let query = Object.fromEntries(parsedUrl.searchParams);
+
+        if (req.method === "POST") {
+            try {
+                let body = "";
+                for await (const chunk of req) {
+                    body += chunk.toString();
+                }
+                if (body) {
+                    const jsonBody = JSON.parse(body);
+                    query = { ...query, ...jsonBody };
+                }
+            } catch(e) {
+                console.error("Failed to parse POST body:", e.message);
+            }
+        }
 
         // 1. ENDPOINT STREAM AUDIO ULTRA STABLE: /stream/:videoId & /play/:videoId
         const streamMatch = pathname.match(/\/(stream|play)\/([a-zA-Z0-9_-]+)/);
         if (streamMatch) {
             const videoId = streamMatch[2];
-            const isPlayRoute = streamMatch[1] === "play";
 
-            // If redirect=true or /play/:videoId, redirect directly to direct audio URL for 100% native HTML5 seek/play from 00:00
-            if (isPlayRoute || query.redirect === "true" || query.raw === "true") {
-                try {
-                    const rawUrl = await getRawDecipheredUrl(videoId);
-                    if (rawUrl) {
-                        res.writeHead(302, { "Location": rawUrl });
-                        return res.end();
-                    }
-                } catch (e) { }
-            }
+            // FAST-PATH: Instant Direct Audio Decipher (~100-300ms) with direct GoogleVideo CDN streaming
+            try {
+                const rawUrl = await getRawDecipheredUrl(videoId);
+                if (rawUrl) {
+                    res.writeHead(302, {
+                        "Location": rawUrl,
+                        "Access-Control-Allow-Origin": "*",
+                        "Cache-Control": "public, max-age=3600"
+                    });
+                    return res.end();
+                }
+            } catch (e) { }
 
             let isPiped = false;
             let fallbackCalled = false;
@@ -874,8 +1060,6 @@ function startRestApiServer(port) {
             const commonArgs = [
                 "--no-update",
                 "--cache-dir", "/tmp/cache",
-                "--js-runtimes", "deno:/usr/local/bin/deno,node:/usr/local/bin/node,node",
-                "--remote-components", "ejs:github",
                 "--extractor-args", extractorArgs
             ];
 
@@ -921,7 +1105,7 @@ function startRestApiServer(port) {
                 });
 
                 ytdlpProc.stdout.once("data", (firstChunk) => {
-                    if (!isPiped) {
+                    if (!isPiped && !res.headersSent) {
                         isPiped = true;
                         res.writeHead(200, {
                             "Content-Type": "audio/webm",
@@ -1108,7 +1292,16 @@ function startRestApiServer(port) {
                 const q = query.q || query.query || "Sheila on 7";
                 const page = parseInt(query.page || 1);
                 const result = await fetchSearchResults(q, page, 20, ytInst, currentBaseUrl);
-                return sendJson(200, result);
+                
+                // Compatibility Layer untuk star-cloud.web.id
+                const dataArr = result.data || [];
+                const formattedData = {
+                    songs: dataArr.filter(i => i.type === 'song'),
+                    albums: dataArr.filter(i => i.type === 'album'),
+                    playlists: dataArr.filter(i => i.type === 'playlist'),
+                    artists: dataArr.filter(i => i.type === 'artist')
+                };
+                return sendJson(200, { status: true, result: formattedData });
             }
 
             // 3. ENDPOINT SONG
@@ -1116,7 +1309,7 @@ function startRestApiServer(port) {
             if (songMatch || pathname === "/api/song") {
                 const songId = songMatch ? songMatch[1] : (query.id || "k1BfsO0mxWQ");
                 const result = await fetchSongDetails(songId, ytInst, currentBaseUrl);
-                return sendJson(200, result);
+                return sendJson(200, { status: true, result: result.data || result });
             }
 
             // 4. ENDPOINT ARTIST
@@ -1124,7 +1317,7 @@ function startRestApiServer(port) {
             if (artistMatch || pathname === "/api/artist") {
                 const artistId = artistMatch ? artistMatch[1] : (query.id || "UCoy8sTKrImqfSq6TYOSW81A");
                 const result = await fetchArtistDetails(artistId, ytInst, currentBaseUrl);
-                return sendJson(200, result);
+                return sendJson(200, { status: true, result: result.data || result });
             }
 
             // 5. ENDPOINT ALBUM
@@ -1132,7 +1325,8 @@ function startRestApiServer(port) {
             if (albumMatch || pathname === "/api/album") {
                 const albumId = albumMatch ? albumMatch[1] : (query.id || "MPREb_N8YZSqmQiv4");
                 const result = await fetchAlbumDetails(albumId, ytInst, currentBaseUrl);
-                return sendJson(200, result);
+                const finalData = (result && result.result) ? result.result : (result.data || result);
+                return sendJson(200, { status: true, result: finalData });
             }
 
             // 6. ENDPOINT PLAYLIST
@@ -1140,21 +1334,77 @@ function startRestApiServer(port) {
             if (playlistMatch || pathname === "/api/playlist") {
                 const playlistId = playlistMatch ? playlistMatch[1] : (query.id || "PL3LUUT1_qZN5G6hOlPm64aCe6A3yIwZKh");
                 const result = await fetchPlaylistDetails(playlistId, ytInst, currentBaseUrl);
-                return sendJson(200, result);
+                const finalData = (result && result.result) ? result.result : (result.data || result);
+                return sendJson(200, { status: true, result: finalData });
             }
 
             // 7. ENDPOINT HOME
             if (pathname === "/api/home") {
                 const page = parseInt(query.page || 1);
                 const result = await fetchSearchResults("home", page, 20, ytInst, currentBaseUrl);
-                return sendJson(200, result);
+                return sendJson(200, { status: true, result: result.data || result });
             }
 
             // 8. ENDPOINT TRENDING
             if (pathname === "/api/trending") {
                 const page = parseInt(query.page || 1);
                 const result = await fetchSearchResults("trending", page, 20, ytInst, currentBaseUrl);
-                return sendJson(200, result);
+                return sendJson(200, { status: true, result: result.data || result });
+            }
+
+            // 9. ENDPOINT SUGGEST (Autocomplete)
+            if (pathname === "/api/suggest") {
+                const q = query.q || query.query || "";
+                let suggestions = [q];
+                try {
+                    const rawSuggestions = await ytInst.getSearchSuggestions(q);
+                    if (rawSuggestions && rawSuggestions.length > 0) {
+                        suggestions = rawSuggestions;
+                    } else {
+                        suggestions = [q, q + " song", q + " official"];
+                    }
+                } catch (e) {
+                    suggestions = [q, q + " lirik", q + " mp3"];
+                }
+                return sendJson(200, { status: true, result: suggestions });
+            }
+
+            // 10. ENDPOINT YTPLAY (Optimized)
+            if (pathname === "/api/ytplay") {
+                const url = query.url || query.query || "";
+                let videoId = url.replace(/^.*v=/, "").split("&")[0];
+                if (!videoId) videoId = "k1BfsO0mxWQ";
+                
+                let audioUrl = currentBaseUrl + "/stream/" + videoId;
+                const data = {
+                    audioUrl: audioUrl,
+                    downloadUrl: audioUrl,
+                    download: { audio: audioUrl }
+                };
+                return sendJson(200, { status: true, result: data });
+            }
+
+            // 11. ENDPOINT LYRICS
+            if (pathname === "/api/lyrics") {
+                const id = query.id || query.v;
+                if (!id) return sendJson(400, { status: false, message: "Missing id" });
+                const result = await fetchSongDetails(id, ytInst, currentBaseUrl);
+                const data = result.data || result;
+                
+                let lines = [];
+                let type = "TEXT";
+                
+                if (data.lyrics) {
+                    if (data.lyrics.hasSynced && data.lyrics.synced) {
+                        lines = data.lyrics.synced;
+                        type = "SYNCED";
+                    } else if (data.lyrics.hasOfficial && data.lyrics.official && data.lyrics.official.lines) {
+                        lines = data.lyrics.official.lines.map(text => ({ text: text }));
+                        type = "TEXT";
+                    }
+                }
+                
+                return sendJson(200, { status: true, result: { lyrics: { lines: lines, type: type } } });
             }
 
             return sendJson(404, { status: "error", message: `Endpoint '${pathname}' tidak ditemukan.` });
@@ -1165,7 +1415,10 @@ function startRestApiServer(port) {
     }
 
     const server = http.createServer(requestHandler);
-    server.on("error", () => { });
+    server.on("error", (err) => {
+        console.error("Server Error:", err.message);
+        process.exit(1);
+    });
     server.listen(serverPort, "0.0.0.0", () => {
         console.log(JSON.stringify({
             status: "running",

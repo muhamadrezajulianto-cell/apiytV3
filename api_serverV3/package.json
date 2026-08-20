@@ -1,16 +1,17 @@
 {
-  "name": "ytmus-vercel-api",
+  "name": "ytmus-api",
   "version": "3.0.0",
-  "description": "YouTube Music API Server (Vercel Ready)",
-  "main": "api/index.js",
+  "description": "YouTube Music API Server (Render & Vercel Ready)",
+  "main": "ytmus.js",
   "scripts": {
-    "start": "node ytmus.js server 3000",
+    "start": "node ytmus.js server",
     "dev": "node ytmus.js server 3000"
   },
   "dependencies": {
-    "ytmusic-api": "^5.2.2",
-    "youtubei.js": "^9.3.0",
-    "yt-dlp-exec": "^1.0.2"
+    "@distube/ytdl-core": "^4.16.12",
+    "youtubei.js": "^18.0.0",
+    "yt-dlp-exec": "^1.0.2",
+    "ytmusic-api": "^5.2.2"
   },
   "engines": {
     "node": ">=18.x"
