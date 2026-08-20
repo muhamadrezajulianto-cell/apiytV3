@@ -1164,6 +1164,7 @@ function startRestApiServer(port) {
         }
     }
 
+    const server = http.createServer(handler);
     server.on("error", () => { });
     server.listen(serverPort, "0.0.0.0", () => {
         console.log(JSON.stringify({
