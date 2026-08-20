@@ -998,7 +998,8 @@ function startRestApiServer(port) {
         }
 
         const host = req.headers.host || `localhost:${serverPort}`;
-        const currentBaseUrl = `http://${host}`;
+        const proto = req.headers["x-forwarded-proto"] || (req.connection && req.connection.encrypted ? "https" : "http");
+        const currentBaseUrl = `${proto}://${host}`;
 
         const parsedUrl = new URL(req.url, currentBaseUrl);
         const pathname = parsedUrl.pathname;
