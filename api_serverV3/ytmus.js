@@ -188,8 +188,8 @@ async function getRawDecipheredUrl(videoId) {
     const proxyArg = proxyUrl ? `--proxy "${proxyUrl}"` : "";
     const potProvider = process.env.POT_PROVIDER_URL || "http://bgutil-ytdlp-pot-provider.railway.internal:4416";
     const extractorArgs = potProvider
-        ? `youtube:player_client=tv,android;pot_provider_url=${potProvider}`
-        : "youtube:player_client=tv,android";
+        ? `youtube:player_client=mweb,ios,android;pot_provider_url=${potProvider}`
+        : "youtube:player_client=mweb,ios,android";
 
     const cmd = `"${binPath}" --no-update --cache-dir /tmp/cache --extractor-args "${extractorArgs}" ${cookieArg} ${proxyArg} -g -f "bestaudio/best" "https://www.youtube.com/watch?v=${videoId}"`;
 
@@ -1061,8 +1061,8 @@ function startRestApiServer(port) {
             const cookiePath = getCookieFilePath();
             const potProvider = process.env.POT_PROVIDER_URL || "http://bgutil-ytdlp-pot-provider.railway.internal:4416";
             const extractorArgs = potProvider
-                ? `youtube:player_client=tv,android;pot_provider_url=${potProvider}`
-                : "youtube:player_client=tv,android";
+                ? `youtube:player_client=mweb,ios,android;pot_provider_url=${potProvider}`
+                : "youtube:player_client=mweb,ios,android";
 
             const commonArgs = [
                 "--no-update",
