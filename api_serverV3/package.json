@@ -4,6 +4,7 @@
   "description": "YouTube Music API Server (Render & Vercel Ready)",
   "main": "ytmus.js",
   "scripts": {
+    "postinstall": "node install-ytdlp.js",
     "start": "node ytmus.js server",
     "dev": "node ytmus.js server 3000"
   },
