@@ -18,10 +18,39 @@ let PROXY_PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
 let ALIAS_BASE_URL = `http://localhost:${PROXY_PORT}`;
 const SERVER_START_TIME = Date.now();
 
+// =============================================================================
+// TEMPAT PASTE COOKIE YOUTUBE LANGSUNG (JIKA INGIN LANGSUNG DI DALAM FILE YTMUS.JS)
+// =============================================================================
+const EMBEDDED_YOUTUBE_COOKIE = `# Netscape HTTP Cookie File
+# https://curl.haxx.se/rfc/cookie_spec.html
+# This is a generated file! Do not edit.
+
+.youtube.com	TRUE	/	FALSE	1795019147	_gcl_au	1.1.657489470.1787243147
+.youtube.com	TRUE	/	TRUE	0	YSC	CJWj4J0fcBc
+.youtube.com	TRUE	/	TRUE	1802798883	__Secure-YNID	21.YT=CpbzPL67WVASpmt3GOhUOjMiE2vvCL080xyQF8bXIzD8QE4Hr8cVuBzWxaelStFts5oABl2Hc5oDKWRdKg-cSXLdKX5AnON5tYaYQ0G_CBghCoYccLVQEygVQAl1-OISPgv5Wm02WVnVWVfKyyygkCoeAAI8pCiuvtHGHrOK3EK3Q1pWIDSK6fo0x-P6jezgaDuKts07XsbY83c34aGQhu1-3F48dxuY9C-JILS9k-ZnqeeUhXE8C6n5MtTgiQ8mPxWcg_EJmZBmpCs7-jIQuH9oitkyJ-zbob0nyfUkkjFrjwqwjXYHAX302FYnhVtzzX34xWKvs_pMeR_bp8ZRUw
+.youtube.com	TRUE	/	TRUE	1802813761	VISITOR_INFO1_LIVE	FYSTgvAmYjo
+.youtube.com	TRUE	/	TRUE	1802813761	VISITOR_PRIVACY_METADATA	CgJJRBIEGgAgYw%3D%3D
+.youtube.com	TRUE	/	TRUE	1787263537	GPS	1
+.youtube.com	TRUE	/	TRUE	1821821738	__Secure-3PAPISID	ZUk4XoshH7EUHsaK/A8J9eZT3KxJSSH37G
+.youtube.com	TRUE	/	TRUE	1821821738	__Secure-3PSID	g.a000BgmpjJ-9RvuQFWJmKGVkNXY1D8xf7KmaYT7VhwDrdinUlmxeDn6RzLdVHuoTm2m7YsLLZQACgYKAUISARQSFQHGX2MiNRgDcVrQ5_wGA_ny_6E06hoVAUF8yKq1rBTS9rSfeAKZyrNwY9aG0076
+.youtube.com	TRUE	/	TRUE	1821821738	LOGIN_INFO	AFmmF2swRQIhAM4nGUHSqn-dHAeIfuJ-xrgoLvuadJA-BD8XppqTVLAaAiAefc8m8YTzzKe6TJumwO1K8mOw0a0TlhGI25amZ2JyHg:QUQ3MjNmd0l3ZjR2RU1jM2NTX0JEWHQwUEw5dHY2MDFKM1BRdFBkVHFfRWRxQW9KZ3lhQ3owQjhKRE9WMWEtMU9EQjdwcm9Tajh3bjcxMHlmemFodXBiSjlGYVZ0YnhnbTczS0V6Q2l6dG1WSnJGYmp6SXZISXpJYWlDMklLdHVEUUlBY1JjNXVKNVc4cTlOb28xWDBoY1piejgtS1FrYzRn
+.youtube.com	TRUE	/	TRUE	1821822830	PREF	repeat=NONE&f4=4000000&f6=40000000&tz=Asia.Jakarta
+.youtube.com	TRUE	/	FALSE	1787262838	ST-3opvp5	session_logininfo=AFmmF2swRQIhAM4nGUHSqn-dHAeIfuJ-xrgoLvuadJA-BD8XppqTVLAaAiAefc8m8YTzzKe6TJumwO1K8mOw0a0TlhGI25amZ2JyHg%3AQUQ3MjNmd0l3ZjR2RU1jM2NTX0JEWHQwUEw5dHY2MDFKM1BRdFBkVHFfRWRxQW9KZ3lhQ3owQjhKRE9WMWEtMU9EQjdwcm9Tajh3bjcxMHlmemFodXBiSjlGYVZ0YnhnbTczS0V6Q2l6dG1WSnJGYmp6SXZISXpJYWlDMklLdHVEUUlBY1JjNXVKNVc4cTlOb28xWDBoY1piejgtS1FrYzRn
+.youtube.com	TRUE	/	TRUE	1818798833	__Secure-1PSIDTS	sidts-CjUBXMw41R2k1jFi6kdg4jvWZmBX8VLqkppAj4PRyJHUamFPGWD6jfqKtsl5jxP3iJD4PB0x_BAA
+.youtube.com	TRUE	/	TRUE	1818798833	__Secure-3PSIDTS	sidts-CjUBXMw41R2k1jFi6kdg4jvWZmBX8VLqkppAj4PRyJHUamFPGWD6jfqKtsl5jxP3iJD4PB0x_BAA
+.youtube.com	TRUE	/	TRUE	1818798834	__Secure-3PSIDCC	AKEyXzWqZ6ChynVe0LOG0F_mspyqokw2q4kR4wMjJqFLhUXqm6LJk5f80rseYoL-Fcz5uMhjgg
+.youtube.com	TRUE	/	TRUE	0	YSC	DgKwkY_pqcg
+.youtube.com	TRUE	/	TRUE	1802814826	VISITOR_INFO1_LIVE	FYSTgvAmYjo
+.youtube.com	TRUE	/	TRUE	1802814826	VISITOR_PRIVACY_METADATA	CgJJRBIEGgAgYw%3D%3D
+.youtube.com	TRUE	/	TRUE	1802795139	__Secure-YNID	21.YT=Ety0L_MMrUX0zEDT05CbrwTTBC6lXvnCVaxi2OmKZd36EKzrDbeTYG4TNx9aHajjdDPbZ_uLgr6R8lRHhaRXCJNYAPNiCCmMA6zqc1NWj7qPNXVMV5nn4MKtwoZXRfKDxT2Gl4YvUYagWWs2vmR4lBY05WpESJ63-_QsLf2Cdwy3JbTmWT35EnW35o1zRJ1ily8AtXlrlVdde_a3RlW5Z-5SMIRoV4LEIXrvzHU3OGDYxVnYBmtDzTNAjpyXTucvOGDJrcxT3JqvvUQp1C3WXYMKwyCf2v-JUoA-1Z2mJNb4UpQ39KaNn5oZyvEd_sdQd0b4pw4rlMRNigMix23Oxw
+.youtube.com	TRUE	/	TRUE	1802795139	__Secure-ROLLOUT_TOKEN	CLq3gfyWmarhnAEQx8egw8-vlgMYtPeuw8-vlgM%3D
+`;
+
 /**
- * Helper untuk mendapatkan path cookies YouTube jika tersedia
+ * Helper untuk membersihkan dan memformat isi cookies YouTube
  */
 function sanitizeCookieContent(content) {
+    if (!content) return "";
     let clean = content.trim();
     if (clean.includes("\\n")) clean = clean.replace(/\\n/g, "\n");
     if (clean.includes("\\t")) clean = clean.replace(/\\t/g, "\t");
@@ -33,16 +62,32 @@ function sanitizeCookieContent(content) {
 }
 
 function getCookieFilePath() {
-    const tempCookiePath = path.join(os.tmpdir(), "yt_cookies.txt");
     const localCookiePath = path.join(__dirname, "cookies.txt");
+    if (fs.existsSync(localCookiePath)) {
+        try {
+            const stat = fs.statSync(localCookiePath);
+            if (stat.size > 10) return localCookiePath;
+        } catch (e) { }
+    }
 
-    // Defensively search process.env keys (handling leading/trailing spaces in key names like " YOUTUBE_COOKIES")
-    let envCookies = process.env.YOUTUBE_COOKIES;
+    const tempCookiePath = path.join(os.tmpdir(), "yt_cookies.txt");
+
+    // 1. Cek Cookie Langsung di Variabel EMBEDDED_YOUTUBE_COOKIE
+    if (EMBEDDED_YOUTUBE_COOKIE && EMBEDDED_YOUTUBE_COOKIE.trim().length > 10) {
+        try {
+            const content = sanitizeCookieContent(EMBEDDED_YOUTUBE_COOKIE);
+            fs.writeFileSync(tempCookiePath, content, "utf-8");
+            return tempCookiePath;
+        } catch (e) { }
+    }
+
+    // 2. Defensively search process.env keys (YOUTUBE_COOKIES, COOKIES, COOKIE)
+    let envCookies = process.env.YOUTUBE_COOKIES || process.env.COOKIES || process.env.COOKIE;
     let envCookiesBase64 = process.env.YOUTUBE_COOKIES_BASE64;
 
     for (const key of Object.keys(process.env)) {
-        const cleanKey = key.trim();
-        if (cleanKey === "YOUTUBE_COOKIES" && !envCookies) {
+        const cleanKey = key.trim().toUpperCase();
+        if ((cleanKey === "YOUTUBE_COOKIES" || cleanKey === "COOKIES" || cleanKey === "COOKIE" || cleanKey.includes("COOKIE")) && !envCookies) {
             envCookies = process.env[key];
         }
         if (cleanKey === "YOUTUBE_COOKIES_BASE64" && !envCookiesBase64) {
@@ -50,7 +95,7 @@ function getCookieFilePath() {
         }
     }
 
-    if (envCookies) {
+    if (envCookies && envCookies.trim().length > 10) {
         try {
             const content = sanitizeCookieContent(envCookies);
             fs.writeFileSync(tempCookiePath, content, "utf-8");
@@ -171,7 +216,7 @@ const directUrlCache = new Map();
  */
 async function getRawDecipheredUrl(videoId) {
     if (!videoId) return null;
-    
+
     // Check cache
     const cached = directUrlCache.get(videoId);
     if (cached && Date.now() - cached.time < 3600000) { // 1 hour TTL
@@ -383,7 +428,7 @@ function formatItem(item, baseUrl = ALIAS_BASE_URL) {
         id: id,
         title: title
     };
-    
+
     if (type === "song") obj.videoId = id;
     if (type === "playlist") obj.playlistId = id;
     if (type === "album") obj.albumId = id;
@@ -599,7 +644,7 @@ async function fetchArtistDetails(artistId, ytmusic, baseUrl = ALIAS_BASE_URL) {
     try {
         const res = await ytmusic.getArtist(cleanId);
         if (res) artist = res;
-    } catch (e) {}
+    } catch (e) { }
 
     // Fallback if ytmusic-api getArtist is broken
     if (!artist.name || !artist.topSongs || artist.topSongs.length === 0) {
@@ -607,10 +652,10 @@ async function fetchArtistDetails(artistId, ytmusic, baseUrl = ALIAS_BASE_URL) {
             const html = await (await fetch(`https://music.youtube.com/channel/${cleanId}`)).text();
             const nameMatch = html.match(/<title>(.*?)\s-\sYouTube Music<\/title>/);
             artist.name = nameMatch ? nameMatch[1] : "Artist";
-            
+
             const thumbMatch = html.match(/<meta property="og:image" content="(.*?)"/);
             if (thumbMatch) artist.thumbnails = [{ url: thumbMatch[1] }];
-            
+
             const searchRes = await ytmusic.search(artist.name);
             artist.topSongs = searchRes.filter(x => x.type === "SONG" || x.type === "VIDEO").slice(0, 10);
             artist.albums = searchRes.filter(x => x.type === "ALBUM").slice(0, 5);
@@ -651,7 +696,7 @@ async function fetchArtistDetails(artistId, ytmusic, baseUrl = ALIAS_BASE_URL) {
 
 async function fetchAlbumDetails(albumId, ytmusic, baseUrl = ALIAS_BASE_URL) {
     const cleanId = albumId.replace(/^.*browse\//, "");
-    
+
     // RDCLAK / VLRD / PL are playlists in YouTube Music
     if (cleanId.startsWith("RD") || cleanId.startsWith("VLRD") || cleanId.startsWith("PL") || cleanId.startsWith("VLPL")) {
         return await fetchPlaylistDetails(cleanId, ytmusic, baseUrl);
@@ -764,7 +809,7 @@ async function fetchPlaylistDetails(playlistId, ytmusic, baseUrl = ALIAS_BASE_UR
         try {
             const videos = await ytmusic.getPlaylistVideos(cleanId);
             if (videos && videos.length > 0) rawVideos = videos;
-        } catch(e){}
+        } catch (e) { }
     }
 
     if (rawVideos.length === 0) {
@@ -1021,7 +1066,7 @@ function startRestApiServer(port) {
                     const jsonBody = JSON.parse(body);
                     query = { ...query, ...jsonBody };
                 }
-            } catch(e) {
+            } catch (e) {
                 console.error("Failed to parse POST body:", e.message);
             }
         }
@@ -1299,7 +1344,7 @@ function startRestApiServer(port) {
                 const q = query.q || query.query || "Sheila on 7";
                 const page = parseInt(query.page || 1);
                 const result = await fetchSearchResults(q, page, 20, ytInst, currentBaseUrl);
-                
+
                 // Compatibility Layer untuk star-cloud.web.id
                 const dataArr = result.data || [];
                 const formattedData = {
@@ -1381,7 +1426,7 @@ function startRestApiServer(port) {
                 const url = query.url || query.query || "";
                 let videoId = url.replace(/^.*v=/, "").split("&")[0];
                 if (!videoId) videoId = "k1BfsO0mxWQ";
-                
+
                 let audioUrl = currentBaseUrl + "/stream/" + videoId;
                 const data = {
                     audioUrl: audioUrl,
@@ -1397,10 +1442,10 @@ function startRestApiServer(port) {
                 if (!id) return sendJson(400, { status: false, message: "Missing id" });
                 const result = await fetchSongDetails(id, ytInst, currentBaseUrl);
                 const data = result.data || result;
-                
+
                 let lines = [];
                 let type = "TEXT";
-                
+
                 if (data.lyrics) {
                     if (data.lyrics.hasSynced && data.lyrics.synced) {
                         lines = data.lyrics.synced;
@@ -1410,7 +1455,7 @@ function startRestApiServer(port) {
                         type = "TEXT";
                     }
                 }
-                
+
                 return sendJson(200, { status: true, result: { lyrics: { lines: lines, type: type } } });
             }
 
