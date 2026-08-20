@@ -233,7 +233,7 @@ async function getRawDecipheredUrl(videoId) {
         ? `youtube:player_client=android,web;pot_provider_url=${potProvider}`
         : "youtube:player_client=android,web";
 
-    const cmd = `"${binPath}" --no-update --cache-dir /tmp/cache --extractor-args "${extractorArgs}" ${cookieArg} ${proxyArg} -g -f "bestaudio/best" "https://www.youtube.com/watch?v=${videoId}"`;
+    const cmd = `"${binPath}" --no-update --cache-dir /tmp/cache --extractor-args "${extractorArgs}" ${cookieArg} ${proxyArg} -g -f "ba/b/140/251/18/best" "https://www.youtube.com/watch?v=${videoId}"`;
 
     try {
         rawUrl = await new Promise((resolve) => {
@@ -1123,7 +1123,7 @@ function startRestApiServer(port) {
 
             commonArgs.push(
                 "-o", "-",
-                "-f", "bestaudio/best",
+                "-f", "ba/b/140/251/18/best",
                 `https://www.youtube.com/watch?v=${videoId}`
             );
 
