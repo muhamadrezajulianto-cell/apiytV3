@@ -89,10 +89,14 @@ function getProxyArg() {
  * Helper untuk mendapatkan path biner yt-dlp secara otomatis
  */
 function getYtdlpBinaryPath() {
-    if (fs.existsSync(path.join(__dirname, "yt-dlp.exe"))) return path.join(__dirname, "yt-dlp.exe");
-    if (fs.existsSync(path.join(__dirname, "yt-dlp"))) return path.join(__dirname, "yt-dlp");
-    if (fs.existsSync("/usr/local/bin/yt-dlp")) return "/usr/local/bin/yt-dlp";
-    if (fs.existsSync("/usr/bin/yt-dlp")) return "/usr/bin/yt-dlp";
+    if (process.platform === "win32" && fs.existsSync(path.join(__dirname, "yt-dlp.exe"))) {
+        return path.join(__dirname, "yt-dlp.exe");
+    }
+    if (process.platform !== "win32") {
+        if (fs.existsSync(path.join(__dirname, "yt-dlp"))) return path.join(__dirname, "yt-dlp");
+        if (fs.existsSync("/usr/local/bin/yt-dlp")) return "/usr/local/bin/yt-dlp";
+        if (fs.existsSync("/usr/bin/yt-dlp")) return "/usr/bin/yt-dlp";
+    }
     try {
         const ytdlpExec = require("yt-dlp-exec");
         if (ytdlpExec && ytdlpExec.constants && ytdlpExec.constants.YTDLP_PATH && fs.existsSync(ytdlpExec.constants.YTDLP_PATH)) {
@@ -176,47 +180,49 @@ async function getRawDecipheredUrl(videoId) {
 
     let rawUrl = null;
 
-    // Method 1: Innertube (Super Fast ~300ms, non-blocking)
+    // Method 1: yt-dlp with Android/TV extractor args (Bypasses bot check)
+    const binPath = getYtdlpBinaryPath();
+    const cookiePath = getCookieFilePath();
+    const cookieArg = cookiePath ? `--cookies "${cookiePath}"` : "";
+    const proxyUrl = getProxyArg();
+    const proxyArg = proxyUrl ? `--proxy "${proxyUrl}"` : "";
+    const potProvider = process.env.POT_PROVIDER_URL || "http://bgutil-ytdlp-pot-provider.railway.internal:4416";
+    const extractorArgs = potProvider
+        ? `youtube:player_client=tv,android;pot_provider_url=${potProvider}`
+        : "youtube:player_client=tv,android";
+
+    const cmd = `"${binPath}" --no-update --cache-dir /tmp/cache --extractor-args "${extractorArgs}" ${cookieArg} ${proxyArg} -g -f "bestaudio/best" "https://www.youtube.com/watch?v=${videoId}"`;
+
     try {
-        const Innertube = await getInnertube();
-        const yt = await Innertube.create({ eval: true });
-        const songInfo = await yt.music.getInfo(videoId);
-        const format = songInfo.chooseFormat({ type: "audio", quality: "best" });
-        if (format) {
-            if (format.url) {
-                rawUrl = format.url;
-            } else if (typeof format.decipher === "function" && yt.session && yt.session.player) {
-                rawUrl = await format.decipher(yt.session.player);
-            } else {
-                const cipherParams = new URLSearchParams(format.signature_cipher || format.cipher);
-                rawUrl = cipherParams.get("url") || null;
-            }
-        }
+        rawUrl = await new Promise((resolve) => {
+            exec(cmd, { timeout: 8000 }, (err, stdout) => {
+                if (err || !stdout) return resolve(null);
+                const lines = stdout.toString().trim().split(/\r?\n/).filter(l => l.startsWith("http"));
+                resolve(lines.length > 0 ? lines[lines.length - 1] : null);
+            });
+        });
     } catch (e) { }
 
-    // Method 2: Async yt-dlp -g with Promise (non-blocking)
+    // Method 2: Public High-Speed Piped / Invidious stream API fallback
     if (!rawUrl) {
-        const binPath = getYtdlpBinaryPath();
-        const cookiePath = getCookieFilePath();
-        const cookieArg = cookiePath ? `--cookies "${cookiePath}"` : "";
-        const proxyUrl = getProxyArg();
-        const proxyArg = proxyUrl ? `--proxy "${proxyUrl}"` : "";
-        const potProvider = process.env.POT_PROVIDER_URL || "http://bgutil-ytdlp-pot-provider.railway.internal:4416";
-        const extractorArgs = potProvider
-            ? `youtube:player_client=tv,android;pot_provider_url=${potProvider}`
-            : "youtube:player_client=tv,android";
-
-        const cmd = `"${binPath}" --no-update --cache-dir /tmp/cache --extractor-args "${extractorArgs}" ${cookieArg} ${proxyArg} -g -f "bestaudio/best" "https://www.youtube.com/watch?v=${videoId}"`;
-
-        try {
-            rawUrl = await new Promise((resolve) => {
-                exec(cmd, { timeout: 10000 }, (err, stdout) => {
-                    if (err || !stdout) return resolve(null);
-                    const lines = stdout.toString().trim().split(/\r?\n/).filter(l => l.startsWith("http"));
-                    resolve(lines.length > 0 ? lines[lines.length - 1] : null);
-                });
-            });
-        } catch (e) { }
+        const fallbacks = [
+            `https://pipedapi.kavin.rocks/streams/${videoId}`,
+            `https://api.piped.privacy.com.de/streams/${videoId}`,
+            `https://inv.nadeko.net/api/v1/videos/${videoId}`
+        ];
+        for (const fb of fallbacks) {
+            try {
+                const res = await fetch(fb, { signal: AbortSignal.timeout(3000) });
+                if (res.ok) {
+                    const data = await res.json();
+                    const audioStreams = data.audioStreams || (data.adaptiveFormats && data.adaptiveFormats.filter(f => f.type && f.type.startsWith('audio')));
+                    if (audioStreams && audioStreams.length > 0) {
+                        rawUrl = audioStreams[0].url;
+                        break;
+                    }
+                }
+            } catch (e) { }
+        }
     }
 
     if (rawUrl) {
