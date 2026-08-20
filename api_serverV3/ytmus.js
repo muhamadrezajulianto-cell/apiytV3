@@ -54,10 +54,19 @@ function sanitizeCookieContent(content) {
     let clean = content.trim();
     if (clean.includes("\\n")) clean = clean.replace(/\\n/g, "\n");
     if (clean.includes("\\t")) clean = clean.replace(/\\t/g, "\t");
-    // Strip short-lived rotating tokens (__Secure-1PSIDTS and __Secure-3PSIDTS) to prevent cookie invalidation
+    
+    // Strip session and security tokens that Google automatically invalidates across different IPs/locations
+    const invalidTokens = [
+        "__Secure-1PSIDTS", "__Secure-3PSIDTS", "__Secure-3PSIDCC", "__Secure-1PSIDCC",
+        "__Secure-3PAPISID", "__Secure-1PAPISID", "SAPISID", "APISID", "SSID", "HSID", "SIDCC"
+    ];
+
     return clean
         .split("\n")
-        .filter(line => !line.includes("__Secure-1PSIDTS") && !line.includes("__Secure-3PSIDTS"))
+        .filter(line => {
+            const hasInvalid = invalidTokens.some(tok => line.includes(tok));
+            return !hasInvalid;
+        })
         .join("\n");
 }
 
@@ -233,8 +242,8 @@ async function getRawDecipheredUrl(videoId) {
     const proxyArg = proxyUrl ? `--proxy "${proxyUrl}"` : "";
     const potProvider = process.env.POT_PROVIDER_URL || "http://bgutil-ytdlp-pot-provider.railway.internal:4416";
     const extractorArgs = potProvider
-        ? `youtube:player_client=mweb,ios,android;pot_provider_url=${potProvider}`
-        : "youtube:player_client=mweb,ios,android";
+        ? `youtube:player_client=android,web;pot_provider_url=${potProvider}`
+        : "youtube:player_client=android,web";
 
     const cmd = `"${binPath}" --no-update --cache-dir /tmp/cache --extractor-args "${extractorArgs}" ${cookieArg} ${proxyArg} -g -f "bestaudio/best" "https://www.youtube.com/watch?v=${videoId}"`;
 
@@ -1106,8 +1115,8 @@ function startRestApiServer(port) {
             const cookiePath = getCookieFilePath();
             const potProvider = process.env.POT_PROVIDER_URL || "http://bgutil-ytdlp-pot-provider.railway.internal:4416";
             const extractorArgs = potProvider
-                ? `youtube:player_client=mweb,ios,android;pot_provider_url=${potProvider}`
-                : "youtube:player_client=mweb,ios,android";
+                ? `youtube:player_client=android,web;pot_provider_url=${potProvider}`
+                : "youtube:player_client=android,web";
 
             const commonArgs = [
                 "--no-update",
