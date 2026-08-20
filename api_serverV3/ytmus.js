@@ -25,25 +25,13 @@ const EMBEDDED_YOUTUBE_COOKIE = `# Netscape HTTP Cookie File
 # https://curl.haxx.se/rfc/cookie_spec.html
 # This is a generated file! Do not edit.
 
-.youtube.com	TRUE	/	FALSE	1795019147	_gcl_au	1.1.657489470.1787243147
-.youtube.com	TRUE	/	TRUE	0	YSC	CJWj4J0fcBc
-.youtube.com	TRUE	/	TRUE	1802798883	__Secure-YNID	21.YT=CpbzPL67WVASpmt3GOhUOjMiE2vvCL080xyQF8bXIzD8QE4Hr8cVuBzWxaelStFts5oABl2Hc5oDKWRdKg-cSXLdKX5AnON5tYaYQ0G_CBghCoYccLVQEygVQAl1-OISPgv5Wm02WVnVWVfKyyygkCoeAAI8pCiuvtHGHrOK3EK3Q1pWIDSK6fo0x-P6jezgaDuKts07XsbY83c34aGQhu1-3F48dxuY9C-JILS9k-ZnqeeUhXE8C6n5MtTgiQ8mPxWcg_EJmZBmpCs7-jIQuH9oitkyJ-zbob0nyfUkkjFrjwqwjXYHAX302FYnhVtzzX34xWKvs_pMeR_bp8ZRUw
-.youtube.com	TRUE	/	TRUE	1802813761	VISITOR_INFO1_LIVE	FYSTgvAmYjo
-.youtube.com	TRUE	/	TRUE	1802813761	VISITOR_PRIVACY_METADATA	CgJJRBIEGgAgYw%3D%3D
-.youtube.com	TRUE	/	TRUE	1787263537	GPS	1
-.youtube.com	TRUE	/	TRUE	1821821738	__Secure-3PAPISID	ZUk4XoshH7EUHsaK/A8J9eZT3KxJSSH37G
-.youtube.com	TRUE	/	TRUE	1821821738	__Secure-3PSID	g.a000BgmpjJ-9RvuQFWJmKGVkNXY1D8xf7KmaYT7VhwDrdinUlmxeDn6RzLdVHuoTm2m7YsLLZQACgYKAUISARQSFQHGX2MiNRgDcVrQ5_wGA_ny_6E06hoVAUF8yKq1rBTS9rSfeAKZyrNwY9aG0076
-.youtube.com	TRUE	/	TRUE	1821821738	LOGIN_INFO	AFmmF2swRQIhAM4nGUHSqn-dHAeIfuJ-xrgoLvuadJA-BD8XppqTVLAaAiAefc8m8YTzzKe6TJumwO1K8mOw0a0TlhGI25amZ2JyHg:QUQ3MjNmd0l3ZjR2RU1jM2NTX0JEWHQwUEw5dHY2MDFKM1BRdFBkVHFfRWRxQW9KZ3lhQ3owQjhKRE9WMWEtMU9EQjdwcm9Tajh3bjcxMHlmemFodXBiSjlGYVZ0YnhnbTczS0V6Q2l6dG1WSnJGYmp6SXZISXpJYWlDMklLdHVEUUlBY1JjNXVKNVc4cTlOb28xWDBoY1piejgtS1FrYzRn
-.youtube.com	TRUE	/	TRUE	1821822830	PREF	repeat=NONE&f4=4000000&f6=40000000&tz=Asia.Jakarta
-.youtube.com	TRUE	/	FALSE	1787262838	ST-3opvp5	session_logininfo=AFmmF2swRQIhAM4nGUHSqn-dHAeIfuJ-xrgoLvuadJA-BD8XppqTVLAaAiAefc8m8YTzzKe6TJumwO1K8mOw0a0TlhGI25amZ2JyHg%3AQUQ3MjNmd0l3ZjR2RU1jM2NTX0JEWHQwUEw5dHY2MDFKM1BRdFBkVHFfRWRxQW9KZ3lhQ3owQjhKRE9WMWEtMU9EQjdwcm9Tajh3bjcxMHlmemFodXBiSjlGYVZ0YnhnbTczS0V6Q2l6dG1WSnJGYmp6SXZISXpJYWlDMklLdHVEUUlBY1JjNXVKNVc4cTlOb28xWDBoY1piejgtS1FrYzRn
-.youtube.com	TRUE	/	TRUE	1818798833	__Secure-1PSIDTS	sidts-CjUBXMw41R2k1jFi6kdg4jvWZmBX8VLqkppAj4PRyJHUamFPGWD6jfqKtsl5jxP3iJD4PB0x_BAA
-.youtube.com	TRUE	/	TRUE	1818798833	__Secure-3PSIDTS	sidts-CjUBXMw41R2k1jFi6kdg4jvWZmBX8VLqkppAj4PRyJHUamFPGWD6jfqKtsl5jxP3iJD4PB0x_BAA
-.youtube.com	TRUE	/	TRUE	1818798834	__Secure-3PSIDCC	AKEyXzWqZ6ChynVe0LOG0F_mspyqokw2q4kR4wMjJqFLhUXqm6LJk5f80rseYoL-Fcz5uMhjgg
-.youtube.com	TRUE	/	TRUE	0	YSC	DgKwkY_pqcg
-.youtube.com	TRUE	/	TRUE	1802814826	VISITOR_INFO1_LIVE	FYSTgvAmYjo
-.youtube.com	TRUE	/	TRUE	1802814826	VISITOR_PRIVACY_METADATA	CgJJRBIEGgAgYw%3D%3D
-.youtube.com	TRUE	/	TRUE	1802795139	__Secure-YNID	21.YT=Ety0L_MMrUX0zEDT05CbrwTTBC6lXvnCVaxi2OmKZd36EKzrDbeTYG4TNx9aHajjdDPbZ_uLgr6R8lRHhaRXCJNYAPNiCCmMA6zqc1NWj7qPNXVMV5nn4MKtwoZXRfKDxT2Gl4YvUYagWWs2vmR4lBY05WpESJ63-_QsLf2Cdwy3JbTmWT35EnW35o1zRJ1ily8AtXlrlVdde_a3RlW5Z-5SMIRoV4LEIXrvzHU3OGDYxVnYBmtDzTNAjpyXTucvOGDJrcxT3JqvvUQp1C3WXYMKwyCf2v-JUoA-1Z2mJNb4UpQ39KaNn5oZyvEd_sdQd0b4pw4rlMRNigMix23Oxw
-.youtube.com	TRUE	/	TRUE	1802795139	__Secure-ROLLOUT_TOKEN	CLq3gfyWmarhnAEQx8egw8-vlgMYtPeuw8-vlgM%3D
+.youtube.com	TRUE	/	TRUE	1787266688	GPS	1
+.youtube.com	TRUE	/	TRUE	1821825045	PREF	f4=4000000&f6=40000000&tz=Asia.Jakarta
+.youtube.com	TRUE	/	TRUE	0	YSC	gkY0LhIMjBY
+.youtube.com	TRUE	/	TRUE	1802817043	VISITOR_INFO1_LIVE	2uOfYTN5Wvo
+.youtube.com	TRUE	/	TRUE	1802817043	VISITOR_PRIVACY_METADATA	CgJJRBIEGgAgEA%3D%3D
+.youtube.com	TRUE	/	TRUE	1802816888	__Secure-YNID	21.YT=d2z5Rymh93Q2MeuPJU03QkAXu24oHMgews1y_69yvNisv39jveDCFOJ9IRwZGba33Y2dMSq22oHW_ajredD1jcSaLRdDAuothS3mRAA_mVdQgYARjmKzeUdqYTavMGhha9hJ-OXyFQeLwfxiPWjgOYuQ0kaEYvaZli4ZXHJ0bwg2PuHRr3JrEovyux0gBr0Tg2CT5tnv5jsNiiacL5b_jx2kVuQJpfESEYr8xmxlOGRPwsFseitx3RNCFcCKxLnjHRZCw9WzWPw_lQJ7Bt6p5KG7oLxe9uN4MB14gAryKVmTolY0GfnTe52OneFelTyAJ_aUgSIeo9VoVn_gE30e4w
+.youtube.com	TRUE	/	TRUE	1802816892	__Secure-ROLLOUT_TOKEN	CKy5guKEtJnVFRDoxLrGoLCWAxjIiKHIoLCWAw%3D%3D
 `;
 
 /**
@@ -54,7 +42,7 @@ function sanitizeCookieContent(content) {
     let clean = content.trim();
     if (clean.includes("\\n")) clean = clean.replace(/\\n/g, "\n");
     if (clean.includes("\\t")) clean = clean.replace(/\\t/g, "\t");
-    
+
     // Strip session and security tokens that Google automatically invalidates across different IPs/locations
     const invalidTokens = [
         "__Secure-1PSIDTS", "__Secure-3PSIDTS", "__Secure-3PSIDCC", "__Secure-1PSIDCC",
